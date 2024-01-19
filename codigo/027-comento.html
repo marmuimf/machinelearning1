@@ -1,0 +1,240 @@
+<!-- NUI = Natural User Interface -->
+<!-- Comienzo de machine learning -->
+<!-- El futuro programa distinguirá entre Cara, coche y flor mediante un proceso estadístico. -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+  <!-- Estilos CSS para centrar los elementos y dar estilo a los canvas -->
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    canvas {
+      border: 1px solid black;
+    }
+  </style>
+
+  <!-- JavaScript -->
+  <script>
+    // Declaración de variables
+    var supercontador = -1;
+    var datosimagenes = [];
+    var temporizador = "";
+    var datos;
+    var imagen = new Image();
+    var contexto;
+    var contexto2;
+    var contexto3;
+    var contextovertical;
+    var contextohorizontal;
+    var contextodiagonal1;
+    var contextodiagonal2;
+    var contextodiagonal3; // Nueva diagonal
+    var patrones = [];
+    var cuentapatrones = [];
+
+    // Función que se ejecuta cuando la ventana ha cargado completamente
+    window.onload = function () {
+      // Obtener contextos de los canvas (para poder pintar en ellos)
+      contexto = document.getElementById("lienzo").getContext("2d");
+      contexto2 = document.getElementById("lienzo2").getContext("2d");
+      contexto3 = document.getElementById("lienzo3").getContext("2d");
+      contextovertical = document.getElementById("lienzovertical").getContext("2d");
+      contextohorizontal = document.getElementById("lienzohorizontal").getContext("2d");
+      contextodiagonal1 = document.getElementById("lienzodiagonal1").getContext("2d");
+      contextodiagonal2 = document.getElementById("lienzodiagonal2").getContext("2d");
+      contextodiagonal3 = document.getElementById("lienzodiagonal3").getContext("2d"); // Nuevo contexto
+
+      // Ocultar lienzo2
+      document.getElementById("lienzo2").style.display = "none";
+
+      // Cargar imágenes de patrones (grados de inclinacion)
+      patrones[0] = new Image();
+      patrones[0].src = "img/vertical.png";
+      patrones[1] = new Image();
+      patrones[1].src = "img/horizontal.png";
+      patrones[2] = new Image();
+      patrones[2].src = "img/diagonal1.png";
+      patrones[3] = new Image();
+      patrones[3].src = "img/diagonal2.png";
+      patrones[4] = new Image();
+      patrones[4].src = "img/diagonal3.png";
+
+      // Inicializar contador de patrones
+      cuentapatrones[0] = 0;
+      cuentapatrones[1] = 0;
+      cuentapatrones[2] = 0;
+      cuentapatrones[3] = 0;
+      cuentapatrones[4] = 0;
+
+      // Cargar datos de imágenes desde un archivo JSON
+      fetch("../imagenes/json/imagenes.json")
+        .then(function (response) {
+          return response.json();
+        })
+        .then(function (misdatos) {
+          datos = misdatos;
+          // Iniciar temporizador para procesar imágenes cada 5 segundos
+          temporizador = setTimeout("bucle()", 5000);
+        });
+    };
+
+    // Función principal que se ejecuta cada 5 segundos
+    function bucle() {
+      supercontador++;
+      // Procesar la siguiente imagen
+      procesaImagen("../../imagenes/002-procesadas/" + datos[supercontador]);
+      clearTimeout(temporizador);
+      // Configurar el temporizador para la próxima ejecución
+      temporizador = setTimeout("bucle()", 5000);
+    }
+
+    // Función para procesar cada imagen
+    function procesaImagen(miimagen) {
+      console.log(miimagen);
+      // Cargo una imagen que tengo en el disco duro
+      imagen.src = "img/" + miimagen;
+      // Me espero a que a imagen cargue, y entonces ejecuto esta función
+      imagen.onload = function () {
+        // Dibujar los patrones en sus respectivos contextos
+        contextovertical.drawImage(patrones[0], 0, 0);
+        contextohorizontal.drawImage(patrones[1], 0, 0);
+        contextodiagonal1.drawImage(patrones[2], 0, 0);
+        contextodiagonal2.drawImage(patrones[3], 0, 0);
+        contextodiagonal3.drawImage(patrones[4], 0, 0); // Dibujar el patrón en el nuevo contexto
+
+        // Dibujar la imagen en el lienzo principal
+        contexto.drawImage(imagen, 0, 0);
+        
+        // Detectamos bordes en la imagen
+        // Cargamos las imagenes en memoria
+        let imagenlienzo1 = contexto.getImageData(0, 0, 512, 512);
+        let imagenlienzo2 = contexto2.getImageData(0, 0, 512, 512);
+
+        // Dibujo para cada uno de los pixeles de la imagen (cada pixel tiene 4 componentes:rojo, verde, azul y alfa.)
+        for (let i = 0; i < imagenlienzo1.data.length; i += 4) {
+          imagenlienzo2.data[i+1] = 0;
+          // Miro la diferencia del canal rojo con en horizontal
+          //i+4 pixel de la derecha
+          let diferencia = Math.abs(imagenlienzo1.data[i] - imagenlienzo1.data[i + 4]);
+          // Miro la diferencia del canal rojo en vertical
+          //i+512*4 pixel de debajo
+          let diferencia2 = Math.abs(imagenlienzo1.data[i] - imagenlienzo1.data[i + 512 * 4]);
+
+          // En el caso de que la diferencia sea notable
+          if (diferencia > 10 || diferencia2 > 10) {
+            // Pinto un pixel negro
+            imagenlienzo2.data[i] = 0;
+            imagenlienzo2.data[i + 1] = 0;
+            imagenlienzo2.data[i + 2] = 0;
+            imagenlienzo2.data[i + 3] = 255;
+          } else {
+            // Pinto un pixel blanco
+            imagenlienzo2.data[i] = 255;
+            imagenlienzo2.data[i + 1] = 255;
+            imagenlienzo2.data[i + 2] = 255;
+            imagenlienzo2.data[i + 3] = 255;
+          }
+        }
+
+        // Colocar la imagen procesada en el lienzo2
+        contexto2.putImageData(imagenlienzo2, 0, 0);
+
+        // Borrar contenido del lienzo3 antes de dibujar
+        contexto3.clearRect(0, 0, 512, 512);
+
+        // Detectar patrones en cada dirección y colocar en el lienzo3
+        detectarPatron(contextovertical, 0, "red");
+        detectarPatron(contextohorizontal, 1, "blue");
+        detectarPatron(contextodiagonal1, 2, "green");
+        detectarPatron(contextodiagonal2, 3, "orange");
+        detectarPatron(contextodiagonal3, 4, "yellow"); // Detectar patrón en el nuevo contexto
+
+        // Normalizar los conteos y guardar en un archivo JSON
+        console.log(cuentapatrones);
+        let total = cuentapatrones.reduce((sum, count) => sum + count, 0);
+        cuentapatrones = cuentapatrones.map(count => count / total);
+
+        console.log(cuentapatrones);
+        let guarda = JSON.stringify(cuentapatrones);
+
+        //Guardo el nombre correcto de la imagen en json
+        let patron = miimagen.split("-");
+        let rutacompleta = miimagen;
+        let soloimagen = rutacompleta.split("/")[rutacompleta.split("/").length - 1];
+        let quitonumero = soloimagen.split("-")[1];
+        let quitoextension = quitonumero.split(".")[0];
+
+        // A traves de un archivo php, guardamos datos en JSON
+        fetch("guardajson2.php?archivo=" + soloimagen + "&patron=" + quitoextension + "&datos=" + guarda);
+      };
+    }
+
+    // Función para detectar un patrón en un contexto específico y resaltarlo en el lienzo3
+    //Recorro las imagenes en h, v y d.
+    function detectarPatron(contextoPatron, indice, color) {
+      let muestraPatron = contextoPatron.getImageData(0, 0, 8, 8); //8 es la altura de la muestra/patron
+
+      for (let x = 0; x < 512; x++) {
+        for (let y = 0; y < 512; y++) {
+          let trozo = contexto2.getImageData(x, y, 8, 8);
+          let suma = 0;
+
+          for (let i = 0; i < trozo.data.length; i += 4) {
+            suma += Math.abs(trozo.data[i] - muestraPatron.data[i]);
+          }
+
+          if (suma < 4000) {
+            // Incrementar el contador del patrón y resaltarlo en el lienzo3
+            cuentapatrones[indice]++;
+            contexto3.fillStyle = color;
+            contexto3.fillRect(x, y, 2, 2);
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body>
+  <!-- Contenedor de etiquetas y canvas para mejor organización -->
+  <div>
+    <!-- Etiqueta para los patrones -->
+    <label text="patrones">PATRONES</label>
+    <!-- Canvas para mostrar el patrón vertical -->
+    <canvas width=8 height=8 id="lienzovertical"></canvas>
+    <!-- Canvas para mostrar el patrón horizontal -->
+    <canvas width=8 height=8 id="lienzohorizontal"></canvas>
+    <!-- Canvas para mostrar el patrón diagonal1 -->
+    <canvas width=8 height=8 id="lienzodiagonal1"></canvas>
+    <!-- Canvas para mostrar el patrón diagonal2 -->
+    <canvas width=8 height=8 id="lienzodiagonal2"></canvas>
+    <!-- Canvas para mostrar el patrón diagonal3 -->
+    <canvas width=8 height=8 id="lienzodiagonal3"></canvas> <!-- Nuevo lienzo -->
+  </div>
+
+  <div>
+    <!-- Etiqueta para la imagen recortada -->
+    <label>Imagen recortada</label>
+    <br>
+    <!-- Canvas para mostrar la imagen recortada -->
+    <canvas width=512 height=512 id="lienzo"></canvas>
+    <br>
+    <br>
+    <!-- Canvas para mostrar la imagen procesada con patrones -->
+    <canvas width=512 height=512 id="lienzo2"></canvas>
+    <!-- Etiqueta para la imagen dibujada con patrones -->
+    <label>Imagen dibujada con patrones</label>
+    <br>
+    <!-- <p>Convertimos la imagen en líneas h, v y d.</p><br> -->
+    <!-- Canvas para mostrar la imagen resaltando los patrones -->
+    <canvas width=512 height=512 id="lienzo3"></canvas>
+  </div>
+</body>
+
+</html>
